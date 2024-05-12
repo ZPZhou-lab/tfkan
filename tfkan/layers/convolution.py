@@ -81,16 +81,17 @@ class Conv2DKAN(Layer):
         return output
 
     def _check_and_reshape_inputs(self, inputs):
-        ndim = inputs.ndim
+        shape = tf.shape(inputs)
+        ndim = len(shape)
         try:
             assert ndim == 4
         except AssertionError:
-            raise ValueError(f"expected min_ndim=4, found ndim={ndim}. Full shape received: {inputs.shape}")
+            raise ValueError(f"expected min_ndim=4, found ndim={ndim}. Full shape received: {shape}")
 
         try:
             assert inputs.shape[-1] == self._in_channels
         except AssertionError:
-            raise ValueError(f"expected last dimension of inputs to be {self._in_channels}, found {inputs.shape[-1]}")
+            raise ValueError(f"expected last dimension of inputs to be {self._in_channels}, found {shape[-1]}")
         
         # reshape the inputs into patches
         # so we can transform the convolution into a dense layer

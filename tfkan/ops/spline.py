@@ -23,8 +23,8 @@ def calc_spline_values(x: tf.Tensor, grid: tf.Tensor, spline_order: int):
     Returns: tf.Tensor
         B-spline bases tensor of shape (batch_size, in_size, grid_size + spline_order).
     """
-    assert x.ndim == 2
-
+    assert len(tf.shape(x)) == 2
+    
     # add a extra dimension to do broadcasting with shape (batch_size, in_size, 1)
     x = tf.expand_dims(x, axis=-1)
 

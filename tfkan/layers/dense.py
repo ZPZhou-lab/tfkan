@@ -99,19 +99,20 @@ class DenseKAN(Layer):
         return spline_out
     
     def _check_and_reshape_inputs(self, inputs):
-        ndim = inputs.ndim
+        shape = tf.shape(inputs)
+        ndim = len(shape)
         try:
             assert ndim >= 2
         except AssertionError:
-            raise ValueError(f"expected min_ndim=2, found ndim={ndim}. Full shape received: {inputs.shape}")
+            raise ValueError(f"expected min_ndim=2, found ndim={ndim}. Full shape received: {shape}")
 
         try:
             assert inputs.shape[-1] == self.in_size
         except AssertionError:
-            raise ValueError(f"expected last dimension of inputs to be {self.in_size}, found {inputs.shape[-1]}")
+            raise ValueError(f"expected last dimension of inputs to be {self.in_size}, found {shape[-1]}")
         
         # reshape the inputs to (-1, in_size)
-        orig_shape = tf.shape(inputs)[:-1]
+        orig_shape = shape[:-1]
         inputs = tf.reshape(inputs, (-1, self.in_size))
 
         return inputs, orig_shape
