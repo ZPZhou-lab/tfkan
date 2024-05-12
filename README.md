@@ -5,7 +5,7 @@ Here is a tensorflow implementation of `KAN` ([Kolmogorov-Arnold Networks (KANs)
 
 Download or clone the repository and run in the terminal:
 ```bash
-pip install .
+cd tfkan && pip install .
 ```
 
 then you can use `tfkan` packages: 
