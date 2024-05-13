@@ -62,8 +62,43 @@ The layers currently implemented include:
 - `DenseKAN`
     - The basic dense layer, corresponding to `tf.keras.layers.dense()` (or `nn.Linear()` in torch) in MLP.
     - Implement the computational logic described in the KANs paper.
-    - There is currently **no grid update method** available.
+    - **grid update method** is available but it will not be automatically used.
 
 - `Conv2DKAN`
     - THe basic 2D image convolution layer, corresponding to `tf.keras.layers.Conv2D()`.
     - The implementation logic is similar to `Conv2D`, expanding convolution operations into matrix multiplication, and then replacing MLP dense layer with `DenseKAN`.
+
+## About Grid Update
+
+The **grid adaptive update** is an important feature mentioned in KANs paper. In this tensorflow implementation of KANs, **each KAN layer has a method** `self.update_grid_from_samples(...)` used to implement this feature. You can call it in **custom training logic** or use Tensorflow `Callbacks`
+
+- In custom training logic
+```python
+def train_model(...):
+    # training logic
+    ...
+
+    # call update_grid_from_samples
+    for layer in model.layers:
+        if hasattr(layer, 'update_grid_from_samples'):
+            layer.update_grid_from_samples(x)
+        x = layer(x)
+```
+
+- or use Tensorflow `Callbacks`
+```python
+# define update grid callback
+class UpdateGridCallback(tf.keras.callbacks.Callback):
+    def on_epoch_begin(self, epoch, logs=None):
+        """
+        update grid before new epoch begins
+        """
+        global x_train, batch_size
+        x_batch = x_train[:batch_size]
+        if epoch > 0:
+            for layer in self.model.layers:
+                if hasattr(layer, 'update_grid_from_samples'):
+                    layer.update_grid_from_samples(x_batch)
+                x_batch = layer(x_batch)
+```
+then add it into `model.fit()`

@@ -1,6 +1,7 @@
 import tensorflow as tf
 from keras.layers import Layer
-from ..ops.spline import calc_spline_values
+from ..ops.spline import calc_spline_values, fit_spline_coef
+from ..ops.grid import build_adaptive_grid
 
 from typing import Tuple, List, Any, Union, Callable
 
@@ -9,6 +10,7 @@ class DenseKAN(Layer):
     def __init__(
         self,
         units: int,
+        use_bias: bool=True,
         grid_size: int=5,
         spline_order: int=3,
         grid_range: Union[Tuple[float], List[float]]=(-1.0, 1.0),
@@ -23,6 +25,7 @@ class DenseKAN(Layer):
         self.spline_order = spline_order
         self.grid_range = grid_range
         self.basis_activation = basis_activation
+        self.use_bias = use_bias
 
         # initialize parameters
         self.spline_initialize_stddev = spline_initialize_stddev
@@ -46,7 +49,12 @@ class DenseKAN(Layer):
         )
         # expand the grid to (in_size, -1)
         self.grid = tf.repeat(self.grid[None, :], in_size, axis=0)
-        self.grid = tf.cast(self.grid, dtype=self.dtype)
+        self.grid = tf.Variable(
+            initial_value=tf.cast(self.grid, dtype=self.dtype),
+            trainable=False,
+            dtype=self.dtype,
+            name="spline_grid"
+        )
 
         # the linear weights of the spline activation
         self.spline_kernel = self.add_weight(
@@ -72,6 +80,18 @@ class DenseKAN(Layer):
         elif not callable(self.basis_activation):
             raise ValueError(f"expected basis_activation to be str or callable, found {type(self.basis_activation)}")
 
+        # build bias
+        if self.use_bias:
+            self.bias = self.add_weight(
+                name="bias",
+                shape=(self.units,),
+                initializer=tf.keras.initializers.Zeros(),
+                trainable=True,
+                dtype=self.dtype
+            )
+        else:
+            self.bias = None
+
         self.built = True
 
     
@@ -95,6 +115,9 @@ class DenseKAN(Layer):
         # aggregate the output using sum (on in_size dim) and reshape into the original shape
         spline_out = tf.reshape(tf.reduce_sum(spline_out, axis=-2), output_shape)
 
+        # add bias
+        if self.use_bias:
+            spline_out += self.bias
 
         return spline_out
     
@@ -116,3 +139,37 @@ class DenseKAN(Layer):
         inputs = tf.reshape(inputs, (-1, self.in_size))
 
         return inputs, orig_shape
+
+    def update_grid_from_samples(self, 
+            inputs: tf.Tensor, 
+            margin: float=0.01,
+            grid_eps: float=0.01
+        ):
+        """
+        update the grid based on the inputs adaptively
+
+        Parameters
+        ----------
+        inputs : tf.Tensor
+            the input tensor with shape (batch_size, dim1, dim2, ..., in_size)
+        """
+
+        # check the inputs, and reshape inputs into 2D tensor (-1, in_size)
+        inputs, _ = self._check_and_reshape_inputs(inputs)
+
+        # calculate the B-spline output
+        # spline_in with shape (batch_size, in_size, grid_basis_size)
+        # spline_out with shape (batch_size, in_size, out_size)
+        spline_in = calc_spline_values(inputs, self.grid, self.spline_order)
+        spline_out = tf.einsum("bik,iko->bio", spline_in, self.spline_kernel)
+
+        # build the adaptive grid
+        grid = build_adaptive_grid(inputs, self.grid_size, self.spline_order, grid_eps, margin, self.dtype)
+
+        # update the grid
+        self.grid.assign(grid)
+
+        # update the spline kernel using the new grid and LS method
+        self.spline_kernel.assign(
+            fit_spline_coef(inputs, spline_out, self.grid, self.spline_order)
+        )

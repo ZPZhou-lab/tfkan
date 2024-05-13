@@ -46,6 +46,7 @@ class Conv2DKAN(Layer):
         self.kernel = DenseKAN(
             units=self.filters,
             dtype=self.dtype,
+            use_bias=False,
             **self.kan_kwargs
         )
         self._in_size = self.kernel_size[0] * self.kernel_size[1] * in_channels
@@ -107,3 +108,10 @@ class Conv2DKAN(Layer):
         inputs = tf.reshape(patches, (-1, self._in_size))
 
         return inputs, orig_shape
+    
+    def update_grid_from_samples(self, 
+        inputs: tf.Tensor, 
+        **kwargs
+    ):
+        inputs, _ = self._check_and_reshape_inputs(inputs)
+        self.kernel.update_grid_from_samples(inputs)
