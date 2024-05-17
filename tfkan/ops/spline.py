@@ -1,12 +1,6 @@
 import tensorflow as tf
 
-@tf.function(
-    input_signature=[
-        tf.TensorSpec(shape=[None, None], dtype=tf.float32),
-        tf.TensorSpec(shape=[None, None], dtype=tf.float32),
-        tf.TensorSpec(shape=(), dtype=tf.int32),
-    ]
-)
+
 def calc_spline_values(x: tf.Tensor, grid: tf.Tensor, spline_order: int):
     """
     Calculate B-spline values for the input tensor.
@@ -47,19 +41,13 @@ def calc_spline_values(x: tf.Tensor, grid: tf.Tensor, spline_order: int):
     return bases
 
 
-@tf.function(
-    input_signature=[
-        tf.TensorSpec(shape=[None, None], dtype=tf.float32),
-        tf.TensorSpec(shape=[None, None, None], dtype=tf.float32),
-        tf.TensorSpec(shape=[None, None], dtype=tf.float32),
-        tf.TensorSpec(shape=(), dtype=tf.int32),
-    ]
-)
 def fit_spline_coef(
         x: tf.Tensor, 
         y: tf.Tensor, 
         grid : tf.Tensor, 
-        spline_order: int
+        spline_order: int,
+        l2_reg: float=0.0,
+        fast: bool=True
     ):
     """
     fit the spline coefficients for given spline input and spline output tensors,\n
@@ -81,6 +69,10 @@ def fit_spline_coef(
         The spline grid tensor with shape `(in_size, grid_size + 2 * spline_order + 1)`
     spline_order : int
         The spline order
+    l2_reg : float, optional
+        The L2 regularization factor for the least square solver, by default `0.0`
+    fast : bool, optional
+        Whether to use the fast solver for the least square problem, by default `True`
     
     Returns
     -------
@@ -98,6 +90,6 @@ def fit_spline_coef(
 
     # solve the linear equation to get the coef
     # coef with shape (in_size, grid_size + spline_order, out_size)
-    coef = tf.linalg.lstsq(B, y)
+    coef = tf.linalg.lstsq(B, y, l2_regularizer=l2_reg, fast=fast)
 
     return coef

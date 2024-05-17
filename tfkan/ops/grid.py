@@ -24,12 +24,14 @@ def build_adaptive_grid(
         the weight for combining the adaptive grid and uniform grid, default to `0.02`
     margin : float, optional
         the margin for extending the grid, default to `0.01`
+    dtype : tf.DType, optional
+        set the data type for the grid, default to `tf.float32`
 
     Returns
     -------
     grid : tf.Tensor
         The adaptive grid built from the input tensor \
-        with shape (grid_size + 2 * spline_order + 1, in_size)
+        with shape `(in_size, grid_size + 2 * spline_order + 1)`
     """
 
     # sort the inputs and build new grid according to the quantiles

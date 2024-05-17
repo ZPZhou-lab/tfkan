@@ -32,18 +32,18 @@ model.build(input_shape=(None, 10))
 When calling `model.summary()` you can see the model structure and its trainable parameters.
 
 ```python
-Model: "sequential_1"
+Model: "sequential"
 _________________________________________________________________
  Layer (type)                Output Shape              Param #   
 =================================================================
- dense_kan (DenseKAN)        (None, 4)                 360       
+ dense_kan (DenseKAN)        (None, 4)                 484       
                                                                  
- dense_kan_1 (DenseKAN)      (None, 1)                 36        
+ dense_kan_1 (DenseKAN)      (None, 1)                 85        
                                                                  
 =================================================================
-Total params: 396 (1.55 KB)
-Trainable params: 396 (1.55 KB)
-Non-trainable params: 0 (0.00 Byte)
+Total params: 569 (2.22 KB)
+Trainable params: 401 (1.57 KB)
+Non-trainable params: 168 (672.00 Byte)
 _________________________________________________________________
 ```
 
@@ -64,13 +64,21 @@ The layers currently implemented include:
     - Implement the computational logic described in the KANs paper.
     - **grid update method** is available but it will not be automatically used.
 
-- `Conv2DKAN`
-    - THe basic 2D image convolution layer, corresponding to `tf.keras.layers.Conv2D()`.
-    - The implementation logic is similar to `Conv2D`, expanding convolution operations into matrix multiplication, and then replacing MLP dense layer with `DenseKAN`.
+- `ConvolutionKAN`
+    - THe basic convolution layer, provide `Conv1DKAN`, `Conv2DKAN` and `Conv3DKAN` for classical 1D, 2D and 3D convolution operations.
+    - The implementation logic is similar to `Conv` in `Tensorflow`, expanding convolution operations into matrix multiplication, and then replacing MLP dense kernel with `DenseKAN` kernel.
 
 ## About Grid Update
 
-The **grid adaptive update** is an important feature mentioned in KANs paper. In this tensorflow implementation of KANs, **each KAN layer has a method** `self.update_grid_from_samples(...)` used to implement this feature. You can call it in **custom training logic** or use Tensorflow `Callbacks`
+The **grid adaptive update** is an important feature mentioned in KANs paper. In this tensorflow implementation of KANs, **each KAN layer has two method** used to implement this feature:
+- `self.update_grid_from_samples(...)`
+    - adaptively update the spline grid points using input samples given.
+    - this can help the spline grid adapt to the numerical range of the input, **avoiding the occurrence of input features outside the support set of the grid** (resulting in outputs that are equal to 0, as spline functions outside the support set are not defined)
+- `self.extend_grid_from_samples(...)` 
+    - extend the spline grid for given `gird_size`
+    - this can help to make the spline activation output more smooth, thereby enhancing the model approximation ability.
+
+You can call it in **custom training logic** or use Tensorflow `Callbacks`
 
 - In custom training logic
 ```python

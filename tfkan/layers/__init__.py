@@ -1,2 +1,2 @@
 from .dense import DenseKAN
-from .convolution import Conv2DKAN
+from .convolution import Conv1DKAN, Conv2DKAN, Conv3DKAN

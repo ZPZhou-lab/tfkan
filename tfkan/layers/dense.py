@@ -1,12 +1,13 @@
 import tensorflow as tf
 from keras.layers import Layer
-from ..ops.spline import calc_spline_values, fit_spline_coef
+from .base import LayerKAN
+from ..ops.spline import fit_spline_coef
 from ..ops.grid import build_adaptive_grid
 
 from typing import Tuple, List, Any, Union, Callable
 
 
-class DenseKAN(Layer):
+class DenseKAN(Layer, LayerKAN):
     def __init__(
         self,
         units: int,
@@ -101,9 +102,7 @@ class DenseKAN(Layer):
         output_shape = tf.concat([orig_shape, [self.units]], axis=0)
 
         # calculate the B-spline output
-        spline_in = calc_spline_values(inputs, self.grid, self.spline_order) # (B, in_size, grid_basis_size)
-        # matrix multiply: (batch, in_size, grid_basis_size) @ (in_size, grid_basis_size, out_size) -> (batch, in_size, out_size)
-        spline_out = tf.einsum("bik,iko->bio", spline_in, self.spline_kernel)
+        spline_out = self.calc_spline_output(inputs)
 
         # calculate the basis b(x) with shape (batch_size, in_size)
         # add basis to the spline_out: phi(x) = c * (b(x) + spline(x)) using broadcasting
@@ -145,31 +144,66 @@ class DenseKAN(Layer):
             margin: float=0.01,
             grid_eps: float=0.01
         ):
-        """
-        update the grid based on the inputs adaptively
+        # check the inputs, and reshape inputs into 2D tensor (-1, in_size)
+        inputs, _ = self._check_and_reshape_inputs(inputs)
 
-        Parameters
-        ----------
-        inputs : tf.Tensor
-            the input tensor with shape (batch_size, dim1, dim2, ..., in_size)
-        """
+        # calculate the B-spline output
+        spline_out = self.calc_spline_output(inputs)
+
+        # build the adaptive grid
+        grid = build_adaptive_grid(inputs, self.grid_size, self.spline_order, grid_eps, margin, self.dtype)
+        
+        # update the spline kernel using the new grid and LS method
+        updated_kernel = fit_spline_coef(inputs, spline_out, grid, self.spline_order)
+
+        # assign to the model
+        self.grid.assign(grid)
+        self.spline_kernel.assign(updated_kernel)
+    
+
+    def extend_grid_from_samples(self, 
+            inputs: tf.Tensor, 
+            extend_grid_size: int,
+            margin: float=0.01,
+            grid_eps: float=0.01,
+            **kwargs
+        ):
+        # check extend_grid_size
+        try:
+            assert extend_grid_size >= self.grid_size
+        except AssertionError:
+            raise ValueError(f"expected extend_grid_size > grid_size, found {extend_grid_size} <= {self.grid_size}")
 
         # check the inputs, and reshape inputs into 2D tensor (-1, in_size)
         inputs, _ = self._check_and_reshape_inputs(inputs)
 
         # calculate the B-spline output
-        # spline_in with shape (batch_size, in_size, grid_basis_size)
-        # spline_out with shape (batch_size, in_size, out_size)
-        spline_in = calc_spline_values(inputs, self.grid, self.spline_order)
-        spline_out = tf.einsum("bik,iko->bio", spline_in, self.spline_kernel)
+        spline_out = self.calc_spline_output(inputs)
 
         # build the adaptive grid
-        grid = build_adaptive_grid(inputs, self.grid_size, self.spline_order, grid_eps, margin, self.dtype)
-
-        # update the grid
-        self.grid.assign(grid)
+        # new shape with (in_size, extend_grid_size + 2 * spline_order + 1)
+        grid = build_adaptive_grid(inputs, extend_grid_size, self.spline_order, grid_eps, margin, self.dtype)
 
         # update the spline kernel using the new grid and LS method
-        self.spline_kernel.assign(
-            fit_spline_coef(inputs, spline_out, self.grid, self.spline_order)
+        l2_reg, fast = kwargs.pop("l2_reg", 0), kwargs.pop("fast", True)
+        updated_kernel = fit_spline_coef(inputs, spline_out, grid, self.spline_order, l2_reg, fast)
+
+        # update the grid and spline kernel
+        delattr(self, "grid")
+        self.grid = tf.Variable(
+            initial_value=tf.cast(grid, dtype=self.dtype),
+            trainable=False,
+            dtype=self.dtype,
+            name="spline_grid"
+        )
+
+        self.grid_size = extend_grid_size
+        self.spline_basis_size = extend_grid_size + self.spline_order
+        delattr(self, "spline_kernel")
+        self.spline_kernel = self.add_weight(
+            name="spline_kernel",
+            shape=(self.in_size, self.spline_basis_size, self.units),
+            initializer=tf.keras.initializers.Constant(updated_kernel),
+            trainable=True,
+            dtype=self.dtype
         )
