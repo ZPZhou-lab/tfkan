@@ -141,7 +141,23 @@ class ConvolutionKAN(Layer, LayerKAN):
         inputs, _ = self._check_and_reshape_inputs(inputs)
         self.kernel.extend_grid_from_samples(inputs, extend_grid_size, **kwargs)
         self.grid_size = self.kernel.grid_size
+
+    def get_config(self):
+        config = super(ConvolutionKAN, self).get_config()
+        config.update({
+            'rank': self.rank,
+            'filters': self.filters,
+            'kernel_size': self.kernel_size,
+            'strides': self.strides,
+            'padding': self.padding,
+            'use_bias': self.use_bias,
+            'kan_kwargs': self.kan_kwargs
+        })
+        return config
     
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
 
 class Conv2DKAN(ConvolutionKAN):
     """

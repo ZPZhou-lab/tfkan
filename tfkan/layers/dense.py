@@ -207,3 +207,21 @@ class DenseKAN(Layer, LayerKAN):
             trainable=True,
             dtype=self.dtype
         )
+
+    def get_config(self):
+        config = super(DenseKAN, self).get_config()
+        config.update({
+            "units": self.units,
+            "use_bias": self.use_bias,
+            "grid_size": self.grid_size,
+            "spline_order": self.spline_order,
+            "grid_range": self.grid_range,
+            "spline_initialize_stddev": self.spline_initialize_stddev,
+            "basis_activation": self.basis_activation
+        })
+
+        return config
+    
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)

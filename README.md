@@ -60,7 +60,7 @@ history = model.fit(x_train, y_train, epochs=100, batch_size=64)
 
 The layers currently implemented include:
 - `DenseKAN`
-    - The basic dense layer, corresponding to `tf.keras.layers.dense()` (or `nn.Linear()` in torch) in MLP.
+    - The basic dense layer, corresponding to `tf.keras.layers.Dense()` (or `nn.Linear()` in torch) in MLP.
     - Implement the computational logic described in the KANs paper.
     - **grid update method** is available but it will not be automatically used.
 
