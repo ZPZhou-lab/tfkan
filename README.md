@@ -3,7 +3,12 @@ Here is a tensorflow implementation of `KAN` ([Kolmogorov-Arnold Networks (KANs)
 
 ## How to use
 
-Download or clone the repository and run in the terminal:
+Install from PyPI directly:
+```bash
+pip install tfkan
+```
+
+or clone the repository and run in the terminal:
 ```bash
 cd tfkan && pip install .
 ```
@@ -110,3 +115,7 @@ class UpdateGridCallback(tf.keras.callbacks.Callback):
                 x_batch = layer(x_batch)
 ```
 then add it into `model.fit()`
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

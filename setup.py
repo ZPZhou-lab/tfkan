@@ -4,16 +4,23 @@ import setuptools
 with open("README.md", "r", encoding="utf8") as fh:
     long_description = fh.read()
 
+# load the requirements from requirements.txt
+with open("requirements.txt", "r", encoding="utf8") as fh:
+    requirements = fh.read().splitlines()
+
 setuptools.setup(
     name="tfkan",
-    version="0.0.1",
-    author="Camel",
+    version="0.1.0",
+    packages=setuptools.find_packages(),
+    install_requires=requirements,
+    author="Xavier Camel",
     description="A Tensorflow implementation of KANs",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    packages=setuptools.find_packages(),
     classifiers=[
-        "Programming Language :: Python :: 3"
+        "Programming Language :: Python :: 3",
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: OS Independent'
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.7',
 )
