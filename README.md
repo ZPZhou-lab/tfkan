@@ -102,12 +102,15 @@ def train_model(...):
 ```python
 # define update grid callback
 class UpdateGridCallback(tf.keras.callbacks.Callback):
+    def __init__(self, training_data, batch_size: int = 128):
+        super(UpdateGridCallback, self).__init__()
+        self.training_data = tf.constant(training_data[:batch_size], tf.float32)
+        
     def on_epoch_begin(self, epoch, logs=None):
         """
         update grid before new epoch begins
         """
-        global x_train, batch_size
-        x_batch = x_train[:batch_size]
+        x_batch = self.training_data
         if epoch > 0:
             for layer in self.model.layers:
                 if hasattr(layer, 'update_grid_from_samples'):
