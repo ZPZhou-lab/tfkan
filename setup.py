@@ -9,15 +9,15 @@ with open("requirements.txt", "r", encoding="utf8") as fh:
     requirements = fh.read().splitlines()
 
 setuptools.setup(
-    name="tfkan",
-    version="0.1.1",
+    name="tfkan_updated",
+    version="0.1.3",
     packages=setuptools.find_packages(),
     install_requires=requirements,
     data_files=
     [
         ('', ['requirements.txt'])
     ],
-    author="Xavier Camel",
+    author="Xavier Camel- Updated By Behtom Adeli",
     description="A Tensorflow implementation of KANs",
     long_description=long_description,
     long_description_content_type="text/markdown",
