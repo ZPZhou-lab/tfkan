@@ -258,13 +258,14 @@ class Conv3DKAN(ConvolutionKAN):
     def _check_and_reshape_inputs(self, inputs):
         # The input should have (batch_size, spatial_1, spatial_2, spatial_3, channels)
         self._check_input_tensor_shape(inputs)
-        
+
         # reshape the inputs into patches
         # so we can transform the convolution into a dense layer
-        patches = tf.extract_volume_patches(
+        patches = tf.image.extract_volume_patches(
             inputs,
             ksizes=[1, *self.kernel_size, 1],
             strides=[1, *self.strides, 1],
+            rates=[1, 1, 1, 1, 1],
             padding=self.padding
         )
         orig_shape = tf.shape(patches)[:-1]
